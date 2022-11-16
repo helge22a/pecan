@@ -206,8 +206,8 @@ met.end <- met.start + lubridate::days(35)
     }
   ) %>% stats::setNames(date.obs)
   
-  rownames(obs.cov$`2020-10-10`$`646`) <- observed_vars
-  colnames(obs.cov$`2020-10-10`$`646`) <- observed_vars
+  # rownames(obs.cov$`2020-10-10`$`646`) <- observed_vars
+  # colnames(obs.cov$`2020-10-10`$`646`) <- observed_vars
   
   #add start.cut to restart list
   restart$start.cut <- lubridate::as_datetime(min(observed_data$calendar_date))
@@ -302,11 +302,12 @@ names(met_id) = sprintf("path%s",seq(1:length(met_paths))) #rename list
 settings$run$inputs$met$path = met_id
 
 #add runs ids from previous forecast to settings object to be passed to build X
+run_path <- list.files(path = "/projectnb/dietzelab/ahelgeso/Site_Outputs/Harvard/Test_fluxDA/PEcAn_1000022534/out/")
 run_id <- list()
-for (k in 1:length(run$id)) {
-  run_id[[k]] = as.character(run$id[k])
+for (k in 1:length(run_path)) {
+  run_id[[k]] = as.character(run_path[k])
 }
-names(run_id) = sprintf("id%s",seq(1:length(run$id))) #rename list
+names(run_id) = sprintf("id%s",seq(1:length(run_path))) #rename list
 settings$runs$id = run_id
 
 # #add run ids from previous sda to settings object to be passed to build X

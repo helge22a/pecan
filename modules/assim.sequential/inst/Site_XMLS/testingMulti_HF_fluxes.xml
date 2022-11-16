@@ -61,12 +61,12 @@
   <bety>
    <user>bety</user>
    <password>bety</password>
-   <host>psql-pecan.bu.edu</host>
+   <host>128.197.168.114</host>
    <dbname>bety</dbname>
    <driver>PostgreSQL</driver>
-   <write>false</write>
+   <write>FALSE</write>
   </bety>
-  <dbfiles>/fs/data3/kzarada/pecan.data/dbfiles/</dbfiles>
+  <dbfiles>/fs/data1/pecan.data/dbfiles</dbfiles>
  </database>
   <pfts>
     <pft>
@@ -101,11 +101,12 @@
     <variable>NEE</variable>
   </sensitivity.analysis>
   <model>
-  <id>1000000030</id>
-  <default.param>/fs/data3/kzarada/US_WCr/data/WillowCreek.param</default.param>
+  <id>1000000022</id>
   <type>SIPNET</type>
+  <revision>ssr</revision>
   <delete.raw>FALSE</delete.raw>
-  <binary>/fs/data5/pecan.models/sipnet_unk/sipnet</binary>
+  <binary>/usr2/postdoc/istfer/SIPNET/trunk//sipnet_if</binary>
+  <jobtemplate>~/sipnet_geo.job</jobtemplate>
  </model>
   <run>
     <settings.646>
@@ -127,7 +128,13 @@
     </settings.646>
   </run>
   <host>
-    <name>localhost</name>
+    <name>geo.bu.edu</name>
+    <user>ahelgeso</user>
+    <prerun>module load R/4.1.2</prerun>
+    <qsub>qsub -l h_rt=24:00:00 -q &apos;geo*&apos; -N SIPNETrun -S /bin/bash -o /projectnb/dietzelab/ahelgeso/Jobs/qsub -e /projectnb/dietzelab/ahelgeso/Jobs/qsub</qsub>
+    <qsub.jobid>Your job ([0-9]+) .*</qsub.jobid>
+    <qstat>'qstat -j @JOBID@ &amp;> /dev/null || echo DONE'</qstat>
+    <tunnel>/projectnb/dietzelab/ahelgeso/tunnel</tunnel>
   </host>
   <multisettings>run</multisettings>
   <settings.info>

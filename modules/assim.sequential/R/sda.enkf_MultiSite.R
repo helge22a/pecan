@@ -138,7 +138,7 @@ sda.enkf.multisite <- function(settings,
   obs.cov <- obs.cov[sapply(lubridate::year(names(obs.cov)), function(obs.year) obs.year %in% (assim.sda))] #checks obs.cov dates against assimyear dates
   #checking that there are dates in obs.mean and adding midnight as the time
   obs.times <- names(obs.mean)
-  obs.times.POSIX <- lubridate::ymd_hms(obs.times)
+  obs.times.POSIX <- lubridate::as_datetime(obs.times)
   for (i in seq_along(obs.times)) {
     if (is.na(obs.times.POSIX[i])) {
       if (is.na(lubridate::ymd(obs.times[i]))) {
@@ -152,16 +152,20 @@ sda.enkf.multisite <- function(settings,
     }
   }
   obs.times <- obs.times.POSIX
-  read_restart_times <- c(lubridate::ymd_hms(start.cut, truncated = 3), obs.times)
+  read_restart_times <- c(lubridate::ymd_hms(start.cut), obs.times)
+  for(k in 2:length(read_restart_times)){
+    read_restart_times[k] <- lubridate::ymd_hms(paste(read_restart_times[k], "23:00:00"))
+  }
   nt  <- length(obs.times) #sets length of for loop for Forecast/Analysis
   if (nt==0) PEcAn.logger::logger.severe('There has to be at least one Obs.')
 
 # Model Specific Setup ----------------------------------------------------
 
   #--get model specific functions
-  my.write_restart <- paste0("PEcAn.", model, "::write_restart.", model)
-  my.read_restart <- paste0("PEcAn.", model, "::read_restart.", model)
-  my.split_inputs  <- paste0("PEcAn.", model, "::split_inputs.", model)
+  do.call("library", list(paste0("PEcAn.", model)))
+  my.write_restart <- paste0("write_restart.", model)
+  my.read_restart <- paste0("read_restart.", model)
+  my.split_inputs  <- paste0("split_inputs.", model)
   #- Double checking some of the inputs
   if (is.null(adjustment)) adjustment <- TRUE
   # models that don't need split_inputs, check register file for that
@@ -266,7 +270,9 @@ sda.enkf.multisite <- function(settings,
         }) %>%
         setNames(site.ids)
       #now all build_X args are properly formatted for the function to return X
-      reads <- build_X(out.configs = out.configs, settings = settings, new.params = new.params, nens = nens, read_restart_times = read_restart_times, outdir = paste0(old.dir, "out/"), t = 1, var.names = var.names, my.read_restart = my.read_restart)
+      reads <- build_X(out.configs = out.configs, settings = settings, new.params = new.params, nens = nens, 
+                       read_restart_times = read_restart_times, outdir = paste0(old.dir, "out/"), t = 1, 
+                       var.names = var.names, my.read_restart = my.read_restart)
       #let's read the parameters of each site/ens
       params.list <- reads %>% map(~.x %>% map("params"))
       # Now let's read the state variables of site/ens
@@ -428,7 +434,7 @@ sda.enkf.multisite <- function(settings,
       ###-------------------------------------------------------------------###
       ###  preparing OBS                                                    ###
       ###-------------------------------------------------------------------###---- 
-      if (!is.na(obs.check)) {
+      if (TRUE %in% !is.na(obs.check)) {
         if (control$debug) browser()
         #Making R and Y
         Obs.cons <- Construct.R(site.ids, var.names, obs.mean[[t]], obs.cov[[t]])
