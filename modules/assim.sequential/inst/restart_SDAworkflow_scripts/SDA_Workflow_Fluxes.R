@@ -101,7 +101,7 @@ site_info <- list(
 # if(FALSE %in% ensPresent){
 #   next
 # }
-restart$filepath <- "/projectnb/dietzelab/ahelgeso/Site_Outputs/Harvard/Test_fluxDA/PEcAn_1000022534/"
+restart$filepath <- "/projectnb/dietzelab/ahelgeso/Site_Outputs/Harvard/Test_fluxDA/PEcAn_1000022581/"
 #set met.start & met.end
 met.start <- sda.start - 1
 met.end <- met.start + lubridate::days(35)
@@ -210,8 +210,8 @@ met.end <- met.start + lubridate::days(35)
   # colnames(obs.cov$`2020-10-10`$`646`) <- observed_vars
   
   #add start.cut to restart list
-  restart$start.cut <- lubridate::as_datetime(min(observed_data$calendar_date))
-  restart$start.cut <- format(restart$start.cut, "%Y-%m-%d %H:%M:%S", tz = "EST")
+  restart$start.cut <- lubridate::as_date(min(observed_data$calendar_date))
+  restart$start.cut <- format(restart$start.cut, "%Y-%m-%d")
   
 
 #-----------------------------------------------------------------------------------------------
@@ -234,9 +234,9 @@ settings$info$date <- paste0(format(Sys.time(), "%Y/%m/%d %H:%M:%S"))
 next.oldir <- paste0(format(Sys.time(), "%Y-%m-%d-%H-%M"))
 #Update/fix/check settings. Will only run the first time it's called, unless force=TRUE
 settings <- PEcAn.settings::prepare.settings(settings, force = TRUE)
-#settings$host$rundir <- settings$rundir
-#settings$host$outdir <- settings$modeloutdir
-#settings$host$folder <- settings$modeloutdir
+settings$host$rundir <- settings$rundir
+settings$host$outdir <- settings$modeloutdir
+settings$host$folder <- settings$modeloutdir
 setwd(settings$outdir)
 #Write pecan.CHECKED.xml
 PEcAn.settings::write.settings(settings, outputfile = "pecan.CHECKED.xml")
@@ -302,7 +302,7 @@ names(met_id) = sprintf("path%s",seq(1:length(met_paths))) #rename list
 settings$run$inputs$met$path = met_id
 
 #add runs ids from previous forecast to settings object to be passed to build X
-run_path <- list.files(path = "/projectnb/dietzelab/ahelgeso/Site_Outputs/Harvard/Test_fluxDA/PEcAn_1000022534/out/")
+run_path <- list.files(path = paste0(restart$filepath, "/out"))
 run_id <- list()
 for (k in 1:length(run_path)) {
   run_id[[k]] = as.character(run_path[k])
@@ -321,7 +321,7 @@ settings$runs$id = run_id
 #save restart object
 save(restart, next.oldir, obs.mean, obs.cov, file = file.path(settings$outdir, "restart.Rdata"))
 #run sda function
-sda.enkf.multisite(settings = settings, 
+PEcAnAssimSequential::sda.enkf.multisite(settings = settings, 
                    obs.mean = obs.mean, 
                    obs.cov = obs.cov, 
                    Q = NULL, 
