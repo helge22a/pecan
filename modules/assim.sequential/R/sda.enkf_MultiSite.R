@@ -48,7 +48,7 @@ sda.enkf.multisite <- function(settings,
   }else{
     restart_flag = FALSE
   }
-  future::plan(multiprocess)
+  future::plan(multisession) #multiprocess is deprecated changed to multisession
   if (control$debug) browser()
   tictoc::tic("Prepration")
   ###-------------------------------------------------------------------###
@@ -124,7 +124,7 @@ sda.enkf.multisite <- function(settings,
   ###-------------------------------------------------------------------###----  
   #filtering obs data based on years specifited in setting > state.data.assimilation
   if (restart_flag) {
-    start.cut <- lubridate::ymd_hms(start.cut) #start.cut taken from restart list as date to begin runs
+    start.cut <- lubridate::ymd_hms(start.cut, truncated = 3) #start.cut taken from restart list as date to begin runs
     Start.year <-lubridate::year(start.cut)
     
   }else{
@@ -139,23 +139,23 @@ sda.enkf.multisite <- function(settings,
   #checking that there are dates in obs.mean and adding midnight as the time
   obs.times <- names(obs.mean)
   obs.times.POSIX <- lubridate::as_datetime(obs.times)
-  for (i in seq_along(obs.times)) {
-    if (is.na(obs.times.POSIX[i])) {
+  
+  for (i in 1:length(obs.times)) {
       if (is.na(lubridate::ymd(obs.times[i]))) {
         PEcAn.logger::logger.warn("Error: no dates associated with observations")
       } else {
         ### Data does not have time associated with dates 
         ### Adding 12:59:59PM assuming next time step starts one second later
         PEcAn.logger::logger.warn("Pumpkin Warning: adding one minute before midnight time assumption to dates associated with data")
-        obs.times.POSIX[i] <- lubridate::ymd_hms(paste(obs.times[i], "23:59:59"))
+        obs.times.POSIX[i] <- lubridate::ymd_hms(paste0(obs.times[i], "23:59:59"))
       }
-    }
   }
+  
   obs.times <- obs.times.POSIX
-  read_restart_times <- c(lubridate::ymd_hms(start.cut), obs.times)
-  for(k in 2:length(read_restart_times)){
-    read_restart_times[k] <- lubridate::ymd_hms(paste(read_restart_times[k], "23:00:00"))
-  }
+  
+  read_restart_times <- c(lubridate::ymd_hms(start.cut, truncated = 3), obs.times)
+  #possible issue for forecasting case, read_restart_times is getting built incorrectly, should 
+  
   nt  <- length(obs.times) #sets length of for loop for Forecast/Analysis
   if (nt==0) PEcAn.logger::logger.severe('There has to be at least one Obs.')
 
@@ -439,8 +439,8 @@ sda.enkf.multisite <- function(settings,
         #Making R and Y
         Obs.cons <- Construct.R(site.ids, var.names, obs.mean[[t]], obs.cov[[t]])
         
-        Y <- Obs.cons$Y
-        R <- Obs.cons$R
+        Y <- Obs.cons$Y #means
+        R <- Obs.cons$R #covariance
         
         if (length(Y) > 1) {
           PEcAn.logger::logger.info("The zero variances in R and Pf is being replaced by half and one fifth of the minimum variance in those matrices respectively.")
