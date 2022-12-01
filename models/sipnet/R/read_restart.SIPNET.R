@@ -32,12 +32,18 @@ read_restart.SIPNET <- function(outdir, runid, stop.time, settings, var.names, p
                                   end.year = lubridate::year(stop.time),
                                   variables = c(var.names,"time_bounds"))
   #calculate last
-  stop.time <- lubridate::ymd_hms(stop.time, tz = "EDT")
   start.time <- as.Date(paste0(lubridate::year(stop.time),"-01-01"))
   time_var <- ens$time_bounds[1,]
-  real_time <- as.POSIXct(time_var*3600*24, origin = start.time)
-  #last <- which(as.Date(real_time)==as.Date(stop.time))[1]
+  #check if start.time is a leap year
+  if(lubridate::leap_year(start.time)){
+    real_time <- as.POSIXct((time_var -1)*3600*24, origin = start.time, tz = "UTC")
+  }else{
+    real_time <- as.POSIXct(time_var*3600*24, origin = start.time, tz = "UTC")
+  }
+  #if a leap year the conversion to real_time adds an extra day...
+  
   last <- which(as.Date(real_time)==as.Date(stop.time))[length(which(as.Date(real_time)==as.Date(stop.time)))]
+  #removed as.Date and changed to round_date to allow for sub daily timesteps?
   
   params$restart <-c() ## This will be filled with some restart coefficient if above ground wood is in the state variables.
   
@@ -66,14 +72,18 @@ read_restart.SIPNET <- function(outdir, runid, stop.time, settings, var.names, p
   
   # Reading in NET Ecosystem Exchange for SDA - unit is kg C m-2 s-1 and the average is estimated
   if ("NEE" %in% var.names) {
-    forecast[[length(forecast) + 1]] <- mean(ens$NEE)  ## 
+    #not sure how best to code this up to get the full days obs to take the average
+    #after taking average new units kgC/m^2/day
+    forecast[[length(forecast) + 1]] <- mean(ens$NEE[1:last])  ## 
     names(forecast[[length(forecast)]]) <- c("NEE")
   }
   
   
-  # Reading in Latent heat flux for SDA  - unit is MW m-2
+  # Reading in Latent heat flux for SDA  - unit is W m-2 and the average is estimated
   if ("Qle" %in% var.names) {
-    forecast[[length(forecast) + 1]] <- ens$Qle[last]*1e-6  ##  
+    #not sure how best to code this up to get the full days obs to take the average
+    #after taking average new units W/m^2/day
+    forecast[[length(forecast) + 1]] <- mean(ens$Qle[1:last])#*1e-6  ##why is this here???  
     names(forecast[[length(forecast)]]) <- c("Qle")
   }
   

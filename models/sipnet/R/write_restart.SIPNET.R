@@ -99,11 +99,13 @@ write_restart.SIPNET <- function(outdir, runid, start.time, stop.time, settings,
   
   if ("SoilMoistFrac" %in% variables) {
     analysis.save[[length(analysis.save) + 1]] <- new.state$SoilMoistFrac  ## unitless
-    if (new.state$SoilMoistFrac < 0 || new.state$SoilMoistFrac > 1) analysis.save[[length(analysis.save)]] <- 0.5
+    if (new.state$SoilMoistFrac < 0) analysis.save[[length(analysis.save)]] <- 0
+    if(new.state$SoilMoistFrac > 1) analysis.save[[length(analysis.save)]] <- 1
     names(analysis.save[[length(analysis.save)]]) <- c("litterWFrac")
     
     analysis.save[[length(analysis.save) + 1]] <- new.state$SoilMoistFrac  ## unitless
-    if (new.state$SoilMoistFrac < 0 || new.state$SoilMoistFrac > 1) analysis.save[[length(analysis.save)]] <- 0.5
+    if (new.state$SoilMoistFrac < 0) analysis.save[[length(analysis.save)]] <- 0
+    if(new.state$SoilMoistFrac > 1) analysis.save[[length(analysis.save)]] <- 1
     names(analysis.save[[length(analysis.save)]]) <- c("soilWFrac")
   }
   
