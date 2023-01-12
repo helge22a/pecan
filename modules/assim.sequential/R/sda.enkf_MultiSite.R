@@ -61,7 +61,7 @@ sda.enkf.multisite <- function(settings,
   outdir     <- settings$modeloutdir # currently model runs locally, this will change if remote is enabled
   rundir     <- settings$host$rundir
   host       <- settings$host
-  
+  #add unit normalization object to be used 
   
   forecast.time.step <- settings$state.data.assimilation$forecast.time.step  #idea for later generalizing
   nens       <- as.numeric(settings$ensemble$size)
@@ -446,6 +446,8 @@ sda.enkf.multisite <- function(settings,
           PEcAn.logger::logger.info("The zero variances in R and Pf is being replaced by half and one fifth of the minimum variance in those matrices respectively.")
           diag(R)[which(diag(R)==0)] <- min(diag(R)[which(diag(R) != 0)])/2
         }
+        
+        
         # making the mapping operator
         H <- Construct.H.multisite(site.ids, var.names, obs.mean[[t]]) #works for only 1 site 
         
@@ -601,8 +603,11 @@ sda.enkf.multisite <- function(settings,
       } else {
         analysis <- as.data.frame(mvtnorm::rmvnorm(as.numeric(nrow(X)), mu.a, Pa, method = "svd"))
       }
-      analysis[analysis<0] <- 0
+      analysis[analysis<0] <- 0  ## this should not be required
       colnames(analysis) <- colnames(X)
+      
+      ## Reverse unit mapping
+      
       ##### Mapping analysis vectors to be in bounds of state variables
       if(processvar==TRUE){
         for(i in 1:ncol(analysis)){
