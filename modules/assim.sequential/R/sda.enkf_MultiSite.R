@@ -75,6 +75,8 @@ sda.enkf.multisite <- function(settings,
   scalef <- settings$state.data.assimilation$scalef %>% as.numeric() # scale factor for localization
   var.names <- sapply(settings$state.data.assimilation$state.variable, '[[', "variable.name")
   names(var.names) <- NULL
+  #pull out unit normalization values var.unit
+  
   multi.site.flag <- PEcAn.settings::is.MultiSettings(settings)
   readsFF <- NULL # this keeps the forward forecast
   
@@ -447,7 +449,12 @@ sda.enkf.multisite <- function(settings,
           diag(R)[which(diag(R)==0)] <- min(diag(R)[which(diag(R) != 0)])/2
         }
         
-        
+        #adjust units so all values in X, Y, and R are in the same range
+        norm.unit <- list(X=X, Y=Y, R=R)
+        norm.unit <- sda_unitnormalization(X = norm.unit$X, Y = norm.unit$Y, R = norm.unit$R, Pa = NULL, mu.a = NULL, method = FALSE)
+        X <- norm.unit$X
+        Y <- norm.unit$Y
+        R <- norm.unit$R
         # making the mapping operator
         H <- Construct.H.multisite(site.ids, var.names, obs.mean[[t]]) #works for only 1 site 
         
@@ -522,11 +529,17 @@ sda.enkf.multisite <- function(settings,
         )
         tictoc::tic(paste0("Preparing for Adjustment for cycle = ", t))
         #Forecast
+        #add var.names to columns
         mu.f <- enkf.params[[obs.t]]$mu.f
         Pf <- enkf.params[[obs.t]]$Pf
         #Analysis
         Pa <- enkf.params[[obs.t]]$Pa
         mu.a <- enkf.params[[obs.t]]$mu.a
+        #convert units back for analysis
+        norm.unit <- sda_unitnormalization(X=X, Y=Y, R=R, Pa=Pa, mu.a=mu.a, method = TRUE)
+        Pa <- norm.unit$Pa
+        mu.a <- norm.unit$mu.a
+        X <- norm.unit$X
         #extracting extra outputs
         if (control$debug) browser()
         if (processvar) {

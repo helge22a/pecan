@@ -16,6 +16,14 @@ sda_unitnormalization(
 \arguments{
 \item{X}{matrix with state variables created in build_x}
 
+\item{Y}{obs.mean}
+
+\item{R}{obs.cov}
+
+\item{Pa}{analysis mean}
+
+\item{mu.a}{analysis cov}
+
 \item{method}{FALSE = forward, TRUE = reverse}
 }
 \value{
