@@ -1,0 +1,185 @@
+---
+title: "Dietze Lab C Cycle Forecast Walkthrough"
+author: "ahelgeso"
+date: '2023-02-14'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '/projectnb/dietzelab/ahelgeso/Site_Outputs/Harvard/RedHat')
+```
+
+Welcome to the walk through for running a 35-day carbon and water cycle forecast at Harvard Forest. This document will help you get a forecast running using three key pieces of data: 1) weather forecast 2) model parameters 3) initial conditions. 
+
+This forecast workflow relies on functions built on the PEcAn platform, so all model inputs and outputs are standardized across model types. The "pecan.xml" contains all model run information, and every single daily forecast has a unique .xml configuration. 
+
+Let's start by looking at the basic .xml, then we will add in the required data file paths, finally we will execute a forecast.
+
+```{r, results = FALSE}
+#In order to work with the .xml we need to load in the PEcAn libraries and dependencies
+library("PEcAn.all")
+library("PEcAn.utils")
+library("REddyProc")
+library("tidyverse")
+library("furrr")
+library("R.utils")
+library("dynutils")
+```
+
+All required arguments used to run a forecast are stored in an "args" list object. This includes file path to the pecan.xml, forecast start date, and file path to forecast output. Since we are running a 35-day forecast the forecast end date is automatically set to 35 days in the future. 
+
+When you run the forecast you will need to change the file paths to match your directory.
+
+```{r}
+args <- list()
+args$settings <- "/projectnb/dietzelab/ahelgeso/pecan/modules/assim.sequential/inst/Site_XMLS/harvard.xml"
+args$start_date <- as.Date("2022-05-25")
+args$end_date <- args$start_date + 35
+args$continue = TRUE #this is a flag used for PEcAn fcns
+args$outputPath <- "/projectnb/dietzelab/ahelgeso/Site_Outputs/Harvard/RedHat"
+```
+
+Now that we have all required information, let's take a look at the pecan.xml or settings object. The important pieces of information in your settings object are: plant function type (pft), model specifics, host configuration, and database access. 
+
+Harvard Forest is located in Petersham MA and is a temperate deciduous forest, so the pft points to posterior files used to set ecological model parameters related to photosynthesis and nutrient cycling. 
+
+The model specifics identify which model to use for the forecast; in this case we are using SIPNET (simplified photosynthesis and evapotranspiration). SIPNET contains a simplistic coupling of the carbon and water cycles. 
+
+The host configuration sets up what machine the forecast runs are to take place on; the simplest configuration is to execute runs locally. The Dietze Lab has buy-in nodes on the cluster we will use for model runs, so the host configuration sets up a tunnel between test-pecan and geo.
+
+The BETY database is coupled to PEcAn functions and acts as catalog of all model types, site locations, inputs, and outputs.
+
+```{r}
+# Open and read in settings file for PEcAn run.
+settings <- PEcAn.settings::read.settings(args$settings)
+settings$pfts
+settings$model
+settings$host
+settings$database
+```
+Let's add our unique forecast start and end date to the settings object. This new settings object will be saved as a pecan.xml.
+
+```{r}
+settings$run$start.date <- as.character(args$start_date)
+settings$run$end.date <- as.character(args$end_date)
+settings$run$site$met.start <- as.character(args$start_date)
+settings$run$site$met.end <- as.character(args$end_date)
+settings$info$date <- paste0(format(Sys.time(), "%Y/%m/%d %H:%M:%S"), " +0000")
+```
+
+Now we need to create a model output folder using prepare.settings. This is where all new pecan.xmls, parameters files, forecast run scripts and forecast output will be saved. 
+
+The most common error at this stage is trouble establishing a connection to BETY or trouble establishing a connection to the host machine. 
+
+We can save our new settings object to our newly created output folder. Every output folder contains a "run" folder where parameter files and job.sh files are stored, a "out" folder where model output is saved. We are running the model with 100 ensemble members so every member gets their own run and out folder.
+
+```{r, echo=FALSE}
+#Pay attention to what your current working directory is, the model output will automatically get saved there
+settings <-
+  PEcAn.settings::prepare.settings(settings, force = FALSE)
+#add correct filepaths for host section
+settings$host$rundir <- settings$rundir
+settings$host$outdir <- settings$modeloutdir
+settings$host$folder <- settings$modeloutdir
+# Write pecan.CHECKED.xml
+PEcAn.settings::write.settings(settings, outputfile = "pecan.CHECKED.xml")
+list.files(settings$outdir)
+```
+
+For the 35-day forecast we will use the NOAA GEFS weather forecast. Everyday a separate function downloads and formats the weather forecast to PEcAn standards in a ".clim" file. 
+
+For this demonstration we will use a file path pointer to grab the weather forecast, but you could also query the BETY database for the file paths. 
+
+The weather parameters are usually referred to as "met" or "met drivers". NOAA GEFS supplies 31 ensemble members for every weather forecast and we use all 31 members for model runs. Using ensemble members is an method for propogating uncertainty in our predictions. After we add all the met file paths to the settings object we want to save a new pecan.xml file. 
+
+```{r}
+metPath <- paste0("/projectnb/dietzelab/ahelgeso/NOAA_met_data/noaa_clim/HARV/", args$start_date, "/")
+met_paths <- list.files(path = metPath, full.names = TRUE, pattern = ".clim")
+met_id <- list()
+for (m in 1:length(met_paths)) {
+  met_id[[m]] = as.character(met_paths[m])
+}
+names(met_id) = sprintf("path%s",seq(1:length(met_paths)))
+settings$run$inputs$met$path = met_id
+settings$run$inputs$met$path
+PEcAn.settings::write.settings(settings, outputfile = "pecan.GEFS.xml")
+```
+
+Next we will add initial condition file paths to the settings object. These files are generated based on field data collected by NEON (national ecological observatory network).
+
+```{r}
+#add correct IC filepaths
+IC_paths <- list.files(path = "/projectnb/dietzelab/ahelgeso/NEON_ic_data/Harvard/USEthese09222022/", full.names = TRUE, pattern = ".nc")
+IC_id <- list()
+for (k in 1:length(IC_paths)) {
+  IC_id[[k]] = as.character(IC_paths[k])
+}
+names(IC_id) = sprintf("path%s",seq(1:length(IC_paths))) #rename list
+settings$run$inputs$poolinitcond$path = IC_id
+```
+
+So now our settings object contains unique met driver file paths and IC file paths. The last piece of required data are the parameter files. 
+
+For the SIPNET model all parameter and IC information is stored in one file called "sipnet.param". This is the file that is used for the model runs.
+
+```{r, message=FALSE}
+# Write model specific configs
+if (PEcAn.utils::status.check("CONFIG") == 0) {
+  PEcAn.utils::status.start("CONFIG")
+  settings <-
+    PEcAn.workflow::runModule.run.write.configs(settings)
+  
+  PEcAn.settings::write.settings(settings, outputfile = "pecan.CONFIGS.xml")
+  PEcAn.utils::status.end()
+} else if (file.exists(file.path(settings$outdir, "pecan.CONFIGS.xml"))) {
+  settings <- PEcAn.settings::read.settings(file.path(settings$outdir, "pecan.CONFIGS.xml"))
+}
+
+if ((length(which(commandArgs() == "--advanced")) != 0)
+    && (PEcAn.utils::status.check("ADVANCED") == 0)) {
+  PEcAn.utils::status.start("ADVANCED")
+  q()
+}
+```
+
+Now when we look at the run folder we should see a parameter file and an executable job.sh file. The job.sh is used to execute model runs and every ensemble member has a unique job.sh file. 
+
+Every model run and ensemble member has a unique identifier number registered with the BETY database. This model run identifier is referred to as a "workflow ID".
+
+```{r}
+ensRun <- list.files(settings$rundir)
+settings$workflow$id #example workflow ID
+ensRun[1] #example ensemble member
+list.files(paste0(settings$rundir, "/", ensRun[1]))
+```
+
+Now that we have our job.sh files we can execute the model runs.
+
+```{r}
+# Start ecosystem model runs
+if (PEcAn.utils::status.check("MODEL") == 0) {
+  PEcAn.utils::status.start("MODEL")
+  stop_on_error <- as.logical(settings[[c("run", "stop_on_error")]])
+  if (length(stop_on_error) == 0) {
+    # If we're doing an ensemble run, don't stop. If only a single run, we
+    # should be stopping.
+    if (is.null(settings[["ensemble"]]) ||
+        as.numeric(settings[[c("ensemble", "size")]]) == 1) {
+      stop_on_error <- TRUE
+    } else {
+      stop_on_error <- FALSE
+    }
+  }
+  runModule_start_model_runs(settings, stop.on.error = stop_on_error)
+  PEcAn.utils::status.end()
+}
+
+# Get results of model runs
+if (PEcAn.utils::status.check("OUTPUT") == 0) {
+  PEcAn.utils::status.start("OUTPUT")
+  runModule.get.results(settings)
+  PEcAn.utils::status.end()
+}
+```
+
