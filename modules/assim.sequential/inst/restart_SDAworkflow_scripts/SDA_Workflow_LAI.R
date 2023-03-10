@@ -25,9 +25,9 @@ library("lubridate")
 #   logger.severe("Missing required arguments")
 # }
 #forecastPath points to the folder where unconstrained forecast runs can be found
-#forecastPath <- "/projectnb/dietzelab/ahelgeso/Site_Outputs/Harvard/Fixed_PAR/"
+forecastPath <- "/projectnb/dietzelab/ahelgeso/Site_Outputs/Harvard/Fixed_PAR/PEcAn_2023-03-10-13-12-03/"
 #SDApath points to the folder where SDA forecast runs can be found
-SDApath <- "/projectnb/dietzelab/ahelgeso/SDA/HF_SDA_Output/Fixed_PAR"
+#SDApath <- "/projectnb/dietzelab/ahelgeso/SDA/HF_SDA_Output/Fixed_PAR"
 #SDApath <- tmp[1]
 #manually set to previous run settings$info$date it creates the filepath to previous run
 #when you run with write to BETY = FALSE the system uses the system date/time as the unique folder name for runs
@@ -40,7 +40,7 @@ outputPath <- "/projectnb/dietzelab/ahelgeso/SDA/HF_SDA_Output/Fixed_PAR"
 settingsPath <- "/projectnb/dietzelab/ahelgeso/pecan/modules/assim.sequential/inst/Site_XMLS/testingMulti_HF.xml"
 #settingsPath <- tmp[4]
 #to manually change start date 
-runDays <- seq(as.Date("2021-07-28"), as.Date("2021-07-29"), by="days")
+runDays <- seq(as.Date("2021-07-02"), as.Date("2021-07-29"), by="days")
 #runDays <- seq(as.Date(tmp[5]), as.Date(tmp[6]), by="days")
 
 #------------------------------------------------------------------------------------------------
@@ -66,9 +66,10 @@ site_info <- list(
   time_zone = "UTC")
 
 #grab old.dir filepath from previous SDA run
-sda.runs <- list.files(SDApath, full.names = TRUE, pattern = paste0("PEcAn_", next.oldir))
-#add filpath to restart list
-restart$filepath <- sda.runs
+# sda.runs <- list.files(SDApath, full.names = TRUE, pattern = paste0("PEcAn_", next.oldir))
+# #add filpath to restart list
+# restart$filepath <- sda.runs
+restart$filepath <- forecastPath
 
 #connecting to DB
 con <-try(PEcAn.DB::db.open(settings$database$bety), silent = TRUE)
@@ -267,61 +268,67 @@ if (length(which(commandArgs() == "--continue")) == 0 && file.exists(statusFile)
   file.remove(statusFile)
 }
 
-#manually add in clim files 
-con <-PEcAn.DB::db.open(settings$database$bety)
-on.exit(db.close(con), add = TRUE)
-
-input_check <- PEcAn.DB::dbfile.input.check(
-  siteid= site_info$site_id %>% as.character(),
-  startdate = met.start %>% as.Date,
-  enddate = NULL,
-  parentid = NA,
-  mimetype="text/csv",
-  formatname="Sipnet.climna",
-  con = con,
-  hostname = PEcAn.remote::fqdn(),
-  pattern = NULL, 
-  exact.dates = TRUE,
-  return.all=TRUE
-)
-
-#If INPUTS already exists, add id and met path to settings file
-
-if(length(input_check$id) > 0){
-  #met paths 
-  clim_check = list()
-  for(i in 1:length(input_check$file_path)){
-    
-    clim_check[[i]] <- file.path(input_check$file_path[i], input_check$file_name[i])
-  }#end i loop for creating file paths 
-  #ids
-  index_id = list()
-  index_path = list()
-  for(i in 1:length(input_check$id)){
-    index_id[[i]] = as.character(input_check$id[i])#get ids as list
-    
-  }#end i loop for making lists
-  names(index_id) = sprintf("id%s",seq(1:length(input_check$id))) #rename list
-  names(clim_check) = sprintf("path%s",seq(1:length(input_check$id)))
-  
-  settings$run$inputs$met$id = index_id
-  settings$run$inputs$met$path = clim_check
-}else{PEcAn.utils::logger.error("No met file found")}
-#settings <- PEcAn.workflow::do_conversions(settings, T, T, T)
-
-if(is_empty(settings$run$inputs$met$path) & length(clim_check)>0){
-  settings$run$inputs$met$id = index_id
-  settings$run$inputs$met$path = clim_check
+# #manually add in clim files 
+# con <-PEcAn.DB::db.open(settings$database$bety)
+# on.exit(db.close(con), add = TRUE)
+# 
+# input_check <- PEcAn.DB::dbfile.input.check(
+#   siteid= site_info$site_id %>% as.character(),
+#   startdate = met.start %>% as.Date,
+#   enddate = NULL,
+#   parentid = NA,
+#   mimetype="text/csv",
+#   formatname="Sipnet.climna",
+#   con = con,
+#   hostname = PEcAn.remote::fqdn(),
+#   pattern = NULL, 
+#   exact.dates = TRUE,
+#   return.all=TRUE
+# )
+# 
+# #If INPUTS already exists, add id and met path to settings file
+# 
+# if(length(input_check$id) > 0){
+#   #met paths 
+#   clim_check = list()
+#   for(i in 1:length(input_check$file_path)){
+#     
+#     clim_check[[i]] <- file.path(input_check$file_path[i], input_check$file_name[i])
+#   }#end i loop for creating file paths 
+#   #ids
+#   index_id = list()
+#   index_path = list()
+#   for(i in 1:length(input_check$id)){
+#     index_id[[i]] = as.character(input_check$id[i])#get ids as list
+#     
+#   }#end i loop for making lists
+#   names(index_id) = sprintf("id%s",seq(1:length(input_check$id))) #rename list
+#   names(clim_check) = sprintf("path%s",seq(1:length(input_check$id)))
+#   
+#   settings$run$inputs$met$id = index_id
+#   settings$run$inputs$met$path = clim_check
+# }else{PEcAn.utils::logger.error("No met file found")}
+# #settings <- PEcAn.workflow::do_conversions(settings, T, T, T)
+# 
+# if(is_empty(settings$run$inputs$met$path) & length(clim_check)>0){
+#   settings$run$inputs$met$id = index_id
+#   settings$run$inputs$met$path = clim_check
+#}
+met_paths <- list.files(path = file.path("/projectnb/dietzelab/ahelgeso/NOAA_met_data_CH1/noaa_clim/HARV", met.start), full.names = TRUE, pattern = ".clim")
+met_id <- list()
+for (m in 1:length(met_paths)) {
+  met_id[[m]] = as.character(met_paths[m])
 }
+names(met_id) = sprintf("path%s",seq(1:length(met_paths))) #rename list
+settings$run$inputs$met$path = met_id
 
-
-# #add runs ids from previous forecast to settings object to be passed to build X
-# run_id <- list()
-# for (k in 1:length(run$id)) {
-#   run_id[[k]] = as.character(run$id[k])
-# }
-# names(run_id) = sprintf("id%s",seq(1:length(run$id))) #rename list
-# settings$runs$id = run_id
+#add runs ids from previous forecast to settings object to be passed to build X
+run_id <- list()
+for (k in 1:length(list.files(file.path(forecastPath, "out")))) {
+  run_id[[k]] = as.character(list.files(file.path(forecastPath, "out"))[k])
+}
+names(run_id) = sprintf("id%s",seq(1:length(list.files(file.path(forecastPath, "out"))))) #rename list
+settings$runs$id = run_id
 
 # #add run ids from previous sda to settings object to be passed to build X
 # run_id <- list()
