@@ -309,6 +309,8 @@ met2model.SIPNET <- function(in.path, in.prefix, outfolder, start_date, end_date
     
     if (is.null(out)) {
       out <- tmp
+      #remove any remaining NAs from out object before saving, if a .clim file is saved with an NA this will cause errors in model runs
+      out <- stats::na.omit(out)
     } else {
       out <- rbind(out, tmp)
     }
