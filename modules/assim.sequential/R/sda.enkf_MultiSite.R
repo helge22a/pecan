@@ -360,8 +360,12 @@ sda.enkf.multisite <- function(settings,
       if (t>1){
         #for next time step split the met if model requires
         #-Splitting the input for the models that they don't care about the start and end time of simulations and they run as long as their met file.
-        inputs.split <- PEcAnAssimSequential::metSplit(conf.settings, inputs, settings, model, no_split = FALSE, obs.times, t, nens, restart_flag = FALSE, my.split_inputs)
-        
+        if(restart_flag){
+          #when running this in forecast mode we do not want to split met at t=2 b/c we want full 35 day forecast
+          inputs.split <- inputs
+        }else{
+          inputs.split <- PEcAnAssimSequential::metSplit(conf.settings, inputs, settings, model, no_split = FALSE, obs.times, t, nens, restart_flag = FALSE, my.split_inputs)
+        }
         ##browser()
         #---------------- setting up the restart argument for each site separatly and keeping them in a list
         restart.list <-
@@ -418,6 +422,13 @@ sda.enkf.multisite <- function(settings,
         writeLines(runs.tmp[runs.tmp != ''], file.path(rundir, 'runs.txt'))
         
         PEcAn.workflow::start_model_runs(settings, write=settings$database$bety$write)
+        #HACK HACK HACK ALERT DO NOT COMMIT
+        outdir.files <- list.files(settings$modeloutdir)
+        
+        for(i in 1:length(outdir.files)){
+          model2netcdf.SIPNET(paste0(settings$modeloutdir, "/", outdir.files[i]), 
+                              42.5, -72.15, '2021-07-28', '2021-09-01', FALSE, 'ssr', 'sipnet.out', FALSE, TRUE)
+        }
         
         #------------- Reading - every iteration and for SDA
         
@@ -482,11 +493,11 @@ sda.enkf.multisite <- function(settings,
         }
         
         #adjust units so all values in X, Y, and R are in the same range
-        norm.unit <- list(X=X, Y=Y, R=R)
-        norm.unit <- sda_unitnormalization(X = norm.unit$X, Y = norm.unit$Y, R = norm.unit$R, Pa = NULL, mu.a = NULL, method = FALSE)
-        X <- norm.unit$X
-        Y <- norm.unit$Y
-        R <- norm.unit$R
+        # norm.unit <- list(X=X, Y=Y, R=R)
+        # norm.unit <- sda_unitnormalization(X = norm.unit$X, Y = norm.unit$Y, R = norm.unit$R, Pa = NULL, mu.a = NULL, method = FALSE)
+        # X <- norm.unit$X
+        # Y <- norm.unit$Y
+        # R <- norm.unit$R
         # making the mapping operator
         H <- Construct.H.multisite(site.ids, var.names, obs.mean[[t]])
         
@@ -573,10 +584,10 @@ sda.enkf.multisite <- function(settings,
         Pa <- enkf.params[[obs.t]]$Pa
         mu.a <- enkf.params[[obs.t]]$mu.a
         #convert units back for analysis
-        norm.unit <- sda_unitnormalization(X=X, Y=Y, R=R, Pa=Pa, mu.a=mu.a, method = TRUE)
-        Pa <- norm.unit$Pa
-        mu.a <- norm.unit$mu.a
-        X <- norm.unit$X
+        # norm.unit <- sda_unitnormalization(X=X, Y=Y, R=R, Pa=Pa, mu.a=mu.a, method = TRUE)
+        # Pa <- norm.unit$Pa
+        # mu.a <- norm.unit$mu.a
+        # X <- norm.unit$X
         #extracting extra outputs
         if (control$debug) browser()
         if (processvar) {
