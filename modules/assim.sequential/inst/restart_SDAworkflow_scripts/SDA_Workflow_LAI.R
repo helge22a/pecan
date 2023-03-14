@@ -25,13 +25,13 @@ library("lubridate")
 #   logger.severe("Missing required arguments")
 # }
 #forecastPath points to the folder where unconstrained forecast runs can be found
-forecastPath <- "/projectnb/dietzelab/ahelgeso/Site_Outputs/Harvard/Fixed_PAR/PEcAn_2023-03-10-13-12-03/"
+#forecastPath <- "/projectnb/dietzelab/ahelgeso/Site_Outputs/Harvard/Fixed_PAR/PEcAn_2023-03-10-13-12-03/"
 #SDApath points to the folder where SDA forecast runs can be found
-#SDApath <- "/projectnb/dietzelab/ahelgeso/SDA/HF_SDA_Output/Fixed_PAR"
+SDApath <- "/projectnb/dietzelab/ahelgeso/SDA/HF_SDA_Output/Fixed_PAR"
 #SDApath <- tmp[1]
 #manually set to previous run settings$info$date it creates the filepath to previous run
 #when you run with write to BETY = FALSE the system uses the system date/time as the unique folder name for runs
-next.oldir <- "2022-09-23-11-49"
+next.oldir <- "2023-03-13-15-45"
 #next.oldir <- tmp[2]
 #outputPath points to location where you would like to save SDA output note this path could match SDApath but does not need to
 outputPath <- "/projectnb/dietzelab/ahelgeso/SDA/HF_SDA_Output/Fixed_PAR"
@@ -40,7 +40,7 @@ outputPath <- "/projectnb/dietzelab/ahelgeso/SDA/HF_SDA_Output/Fixed_PAR"
 settingsPath <- "/projectnb/dietzelab/ahelgeso/pecan/modules/assim.sequential/inst/Site_XMLS/testingMulti_HF.xml"
 #settingsPath <- tmp[4]
 #to manually change start date 
-runDays <- seq(as.Date("2021-07-02"), as.Date("2021-07-29"), by="days")
+runDays <- seq(as.Date("2021-07-17"), as.Date("2021-07-31"), by="days")
 #runDays <- seq(as.Date(tmp[5]), as.Date(tmp[6]), by="days")
 
 #------------------------------------------------------------------------------------------------
@@ -66,10 +66,10 @@ site_info <- list(
   time_zone = "UTC")
 
 #grab old.dir filepath from previous SDA run
-# sda.runs <- list.files(SDApath, full.names = TRUE, pattern = paste0("PEcAn_", next.oldir))
-# #add filpath to restart list
-# restart$filepath <- sda.runs
-restart$filepath <- forecastPath
+sda.runs <- list.files(SDApath, full.names = TRUE, pattern = paste0("PEcAn_", next.oldir))
+#add filpath to restart list
+restart$filepath <- sda.runs
+#restart$filepath <- forecastPath
 
 #connecting to DB
 con <-try(PEcAn.DB::db.open(settings$database$bety), silent = TRUE)
@@ -323,20 +323,20 @@ names(met_id) = sprintf("path%s",seq(1:length(met_paths))) #rename list
 settings$run$inputs$met$path = met_id
 
 #add runs ids from previous forecast to settings object to be passed to build X
-run_id <- list()
-for (k in 1:length(list.files(file.path(forecastPath, "out")))) {
-  run_id[[k]] = as.character(list.files(file.path(forecastPath, "out"))[k])
-}
-names(run_id) = sprintf("id%s",seq(1:length(list.files(file.path(forecastPath, "out"))))) #rename list
-settings$runs$id = run_id
-
-# #add run ids from previous sda to settings object to be passed to build X
 # run_id <- list()
-# for (k in 1:length(previous.ens)) {
-#   run_id[[k]] = as.character(previous.ens[k])
+# for (k in 1:length(list.files(file.path(forecastPath, "out")))) {
+#   run_id[[k]] = as.character(list.files(file.path(forecastPath, "out"))[k])
 # }
-# names(run_id) = sprintf("id%s",seq(1:length(previous.ens))) #rename list
+# names(run_id) = sprintf("id%s",seq(1:length(list.files(file.path(forecastPath, "out"))))) #rename list
 # settings$runs$id = run_id
+
+#add run ids from previous sda to settings object to be passed to build X
+run_id <- list()
+for (k in 1:length(list.files(file.path(restart$filepath, "out")))) {
+  run_id[[k]] = as.character(list.files(file.path(restart$filepath, "out")[k]))
+}
+names(run_id) = sprintf("id%s",seq(1:length(list.files(file.path(restart$filepath, "out"))))) #rename list
+settings$runs$id = run_id
 
 #save restart object
 save(restart, next.oldir, obs.mean, obs.cov, file = file.path(settings$outdir, "restart.Rdata"))
