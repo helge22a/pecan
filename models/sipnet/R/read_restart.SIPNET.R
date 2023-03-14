@@ -39,10 +39,12 @@ read_restart.SIPNET <- function(outdir, runid, stop.time, settings, var.names, p
                                   end.year = lubridate::year(stop.time),
                                   variables = c(state.vars,"time_bounds"))
   #calculate last
-  start.time <- as.Date(paste0(lubridate::year(stop.time),"-01-01"))
+  #issue matching days using the 1st of the year (adds an extra day) switching to using the last day of previous year
+  #start.time <- as.Date(paste0(lubridate::year(stop.time),"-01-01"))
+  start.time <- as.Date(paste0((lubridate::year(stop.time)-1),"-12-31"))
   time_var <- ens$time_bounds[1,]
   #check if start.time is a leap year
-  if(lubridate::leap_year(start.time)){
+  if(lubridate::leap_year(stop.time)){
     real_time <- as.POSIXct((time_var -1)*3600*24, origin = start.time, tz = "UTC")
   }else{
     real_time <- as.POSIXct(time_var*3600*24, origin = start.time, tz = "UTC")
