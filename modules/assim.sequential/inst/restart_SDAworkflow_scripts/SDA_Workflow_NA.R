@@ -14,28 +14,39 @@ library('nimble')
 library("sp")
 library("sf")
 library("lubridate")
+library("foreach")
+library("Kendall")
 #plan(multisession)
 
 
 # ----------------------------------------------------------------------------------------------
 #------------------------------------------Prepared SDA Settings -----
 # ----------------------------------------------------------------------------------------------
-#forecastPath <- "/projectnb/dietzelab/ahelgeso/Site_Outputs/Harvard/Fixed_PAR/PEcAn_2023-04-02-14-53-12/"
-SDApath <- "/projectnb/dietzelab/ahelgeso/SDA/HF_SDA_Output/free_runs/"
+#forecastPath <- "/projectnb/dietzelab/ahelgeso/Site_Outputs/Harvard/CH1_freeRuns/PEcAn_2023-04-20-15-28-17/"
+SDApath <- "/projectnb/dietzelab/ahelgeso/SDA/HF_SDA_Output/CH1_free_runs/"
 #manually set to previous run settings$info$date it creates the filepath to previous run
-next.oldir <- "2023-04-05-10-23"
+next.oldir <- "2023-04-28-11-28"
 #to manually change start date 
-runDays <- seq(as.Date("2021-02-05"), as.Date("2022-06-23"), by="days")
+runDays <- seq(as.Date("2021-05-17"), as.Date("2022-06-23"), by="days")
 
 #------------------------------------------------------------------------------------------------
 #------------------------------------------ Preparing the pecan xml -----------------------------
 #------------------------------------------------------------------------------------------------
 for (s in 1:length(runDays)) {
-  restart <- list()
-  outputPath <- "/projectnb/dietzelab/ahelgeso/SDA/HF_SDA_Output/free_runs"
-  setwd(outputPath)
   #set sda.start
   sda.start <- as.Date(runDays[s])
+  #set met.start & met.end
+  met.check <- as.character(sda.start - 1)
+  met.start <- sda.start - 1
+  met.end <- met.start + lubridate::days(35)
+  #if dates is listed as not having met data available skip to next day
+  load("/projectnb/dietzelab/ahelgeso/NOAA_met_data_CH1/noaa_clim/HARV/datesWOmet.Rdata")
+  if(met.check %in% datesWOmet){
+    next
+  }
+  restart <- list()
+  outputPath <- "/projectnb/dietzelab/ahelgeso/SDA/HF_SDA_Output/CH1_free_runs/"
+  setwd(outputPath)
   #sda.start <- as.Date("2021-07-15")
   
   #reading xml
@@ -87,9 +98,7 @@ for (s in 1:length(runDays)) {
   #   next
   # }
   
-  #set met.start & met.end
-  met.start <- sda.start - 1
-  met.end <- met.start + lubridate::days(35)
+  
   
   # --------------------------------------------------------------------------------------------------
   #---------------------------------------------- NA DATA -------------------------------------
@@ -251,7 +260,7 @@ for (s in 1:length(runDays)) {
   # names(run_id) = sprintf("id%s",seq(1:length(previous.ens))) #rename list
   # settings$runs$id = run_id
   
-  #add runs ids from previous forecast to settings object to be passed to build X
+  # #add runs ids from previous forecast to settings object to be passed to build X
   # run_id <- list()
   # for (k in 1:length(list.files(file.path(forecastPath, "out")))) {
   #   run_id[[k]] = as.character(list.files(file.path(forecastPath, "out"))[k])

@@ -14,6 +14,8 @@ library('nimble')
 library("sp")
 library("sf")
 library("lubridate")
+library("foreach")
+library("Kendall")
 #plan(multisession)
 
 
@@ -31,16 +33,16 @@ SDApath <- "/projectnb/dietzelab/ahelgeso/SDA/HF_SDA_Output/Fixed_PAR"
 #SDApath <- tmp[1]
 #manually set to previous run settings$info$date it creates the filepath to previous run
 #when you run with write to BETY = FALSE the system uses the system date/time as the unique folder name for runs
-next.oldir <- "2023-03-13-15-45"
+next.oldir <- "2023-03-15-13-36"
 #next.oldir <- tmp[2]
 #outputPath points to location where you would like to save SDA output note this path could match SDApath but does not need to
-outputPath <- "/projectnb/dietzelab/ahelgeso/SDA/HF_SDA_Output/Fixed_PAR"
+outputPath <- "/projectnb/dietzelab/ahelgeso/SDA/HF_SDA_Output/CH1_lai_runs/"
 #outputPath <- tmp[3]
 #settingsPath points to location where multisite xml can be found
 settingsPath <- "/projectnb/dietzelab/ahelgeso/pecan/modules/assim.sequential/inst/Site_XMLS/testingMulti_HF.xml"
 #settingsPath <- tmp[4]
 #to manually change start date 
-runDays <- seq(as.Date("2021-07-17"), as.Date("2021-07-31"), by="days")
+runDays <- seq(as.Date("2021-05-28"), as.Date("2021-08-31"), by="days")
 #runDays <- seq(as.Date(tmp[5]), as.Date(tmp[6]), by="days")
 
 #------------------------------------------------------------------------------------------------
@@ -111,55 +113,63 @@ met.end <- met.start + lubridate::days(35)
 # --------------------------------------------------------------------------------------------------
 
 
-  lai <- call_MODIS(outdir = NULL,
-                    var = 'lai', 
-                    site_info = site_info, 
-                    product_dates = c(paste0(lubridate::year(met.start), strftime(met.start, format = "%j")),paste0(lubridate::year(met.end), strftime(met.end, format = "%j"))),
-                    run_parallel = TRUE, 
-                    ncores = NULL, 
-                    product = "MOD15A2H", 
-                    band = "Lai_500m",
-                    package_method = "MODISTools", 
-                    QC_filter = TRUE,
-                    progress = TRUE)
-  
+  # lai <- call_MODIS(outdir = NULL,
+  #                   var = 'lai', 
+  #                   site_info = site_info, 
+  #                   product_dates = c(paste0(lubridate::year(met.start), strftime(met.start, format = "%j")),paste0(lubridate::year(met.end), strftime(met.end, format = "%j"))),
+  #                   run_parallel = TRUE, 
+  #                   ncores = NULL, 
+  #                   product = "MOD15A2H", 
+  #                   band = "Lai_500m",
+  #                   package_method = "MODISTools", 
+  #                   QC_filter = TRUE,
+  #                   progress = TRUE)
+#read in pre-downloaded LAI values
+  lai <- read.csv("/projectnb/dietzelab/dongchen/All_NEON_SDA/test_OBS/LAI.csv", header = TRUE)
+  lai <- filter(lai, site_id == 1000004945)
 #filter for good resolution data
-  lai <- lai %>% filter(qc == "000") 
+  #lai <- lai %>% filter(qc == "000") 
 #filter for lai that matches sda.start
-  lai <- lai %>% filter(calendar_date == sda.start)
+  #lai <- lai %>% filter(calendar_date == sda.start)
+  lai <- lai %>% filter(date == sda.start)
 
+  # if(dim(lai)[1] < 1){
+  #   lai = data.frame(calendar_date = sda.start, site_id = site_info$site_id, data = NA)
+  #   PEcAn.logger::logger.warn(paste0("MODIS mean Data not available for these dates, initialzing NA"))
+  # }
   if(dim(lai)[1] < 1){
-    lai = data.frame(calendar_date = sda.start, site_id = site_info$site_id, data = NA)
+    lai = data.frame(date = sda.start, site_id = site_info$site_id, lai = NA, sd = NA)
     PEcAn.logger::logger.warn(paste0("MODIS mean Data not available for these dates, initialzing NA"))
   }
 
-  lai_sd <- call_MODIS(outdir = NULL,
-                       var = 'lai', 
-                       site_info = site_info, 
-                       product_dates = c(paste0(lubridate::year(met.start), strftime(met.start, format = "%j")),paste0(lubridate::year(met.end), strftime(met.end, format = "%j"))),
-                       run_parallel = TRUE, 
-                       ncores = NULL, 
-                       product = "MOD15A2H", 
-                       band = "LaiStdDev_500m",
-                       package_method = "MODISTools", 
-                       QC_filter = TRUE,
-                       progress = TRUE)
+  # lai_sd <- call_MODIS(outdir = NULL,
+  #                      var = 'lai', 
+  #                      site_info = site_info, 
+  #                      product_dates = c(paste0(lubridate::year(met.start), strftime(met.start, format = "%j")),paste0(lubridate::year(met.end), strftime(met.end, format = "%j"))),
+  #                      run_parallel = TRUE, 
+  #                      ncores = NULL, 
+  #                      product = "MOD15A2H", 
+  #                      band = "LaiStdDev_500m",
+  #                      package_method = "MODISTools", 
+  #                      QC_filter = TRUE,
+  #                      progress = TRUE)
  
 #filter for good resolution data
-  lai_sd <- lai_sd %>% filter(qc == "000")
+  #lai_sd <- lai_sd %>% filter(qc == "000")
 #filter for lai.sd that matches sda.start
-  lai_sd <- lai_sd %>% filter(calendar_date == sda.start)
+  #lai_sd <- lai_sd %>% filter(calendar_date == sda.start)
   
-  if(dim(lai_sd)[1] < 1){
-    lai_sd = data.frame(calendar_date = sda.start, site_id = site_info$site_id, data = NA)
-    PEcAn.logger::logger.warn(paste0("MODIS standard deviation Data not available for these dates, initialzing NA"))
-  }
+  # if(dim(lai_sd)[1] < 1){
+  #   lai_sd = data.frame(calendar_date = sda.start, site_id = site_info$site_id, data = NA)
+  #   PEcAn.logger::logger.warn(paste0("MODIS standard deviation Data not available for these dates, initialzing NA"))
+  # }
 
 #build obs mean/cov matrix for LAI
   #add NA obs for 1 day after LAI obs available
   na.date <- as.Date(sda.start + 1)
   na.date <- as.character(na.date)
-  obs.mean <- data.frame(date = c(lai$calendar_date, na.date), site_id = c(lai$site_id, lai$site_id), lai = c(lai$data, NA))
+  #obs.mean <- data.frame(date = c(lai$calendar_date, na.date), site_id = c(lai$site_id, lai$site_id), lai = c(lai$data, NA))
+  obs.mean <- data.frame(date = c(lai$date, na.date), site_id = c(lai$site_id, lai$site_id), lai = c(lai$lai, NA))
   obs.mean$date = as.character(obs.mean$date, stringsAsFactors = FALSE)
   obs.mean <- split(obs.mean, obs.mean$date)
   
@@ -193,7 +203,8 @@ met.end <- met.start + lubridate::days(35)
   #   }
   # }
   
-  obs.cov <- data.frame(date = c(lai_sd$calendar_date, na.date), site_id = c(lai_sd$site_id, lai_sd$site_id), lai = c(lai_sd$data, NA))
+  #obs.cov <- data.frame(date = c(lai_sd$calendar_date, na.date), site_id = c(lai_sd$site_id, lai_sd$site_id), lai = c(lai_sd$data, NA))
+  obs.cov <- data.frame(date = c(lai$date, na.date), site_id = c(lai$site_id, lai$site_id), lai = c(lai$sd, NA))
   obs.cov$date = as.character(obs.cov$date, stringsAsFactors = FALSE)
   obs.cov <- split(obs.cov, obs.cov$date)
   
@@ -232,7 +243,8 @@ met.end <- met.start + lubridate::days(35)
   #   }
   # }
   #add start.cut to restart list
-  restart$start.cut <- lubridate::as_datetime(min(lai$calendar_date))
+  #restart$start.cut <- lubridate::as_datetime(min(lai$calendar_date))
+  restart$start.cut <- sda.start
   restart$start.cut <- format(restart$start.cut, "%Y-%m-%d %H:%M:%S", tz = "EST")
   
 
