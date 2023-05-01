@@ -421,13 +421,15 @@ sda.enkf.multisite <- function(settings,
         runs.tmp <- list.dirs(rundir, full.names = F)
         writeLines(runs.tmp[runs.tmp != ''], file.path(rundir, 'runs.txt'))
         
-        PEcAn.workflow::start_model_runs(settings, write=settings$database$bety$write)
+        #PEcAn.workflow::start_model_runs(settings, write=settings$database$bety$write)
+        PEcAn.workflow::qsub_parallel(settings, files = PEcAn.workflow::merge_job_files(settings))
+        
         #HACK HACK HACK ALERT DO NOT COMMIT
         outdir.files <- list.files(settings$modeloutdir)
         
-        for(i in 1:length(outdir.files)){
-          model2netcdf.SIPNET(paste0(settings$modeloutdir, "/", outdir.files[i]), 
-                              42.5, -72.15, '2021-07-28', '2021-09-01', FALSE, 'ssr', 'sipnet.out', FALSE, TRUE)
+        for(i in 1:nens){
+          PEcAn.SIPNET::model2netcdf.SIPNET(paste0(settings$modeloutdir, "/", outdir.files[i]), 
+                              42.5, -72.15, settings$run$site$met.start, settings$run$site$met.end, FALSE, 'ssr', 'sipnet.out', FALSE, TRUE)
         }
         
         #------------- Reading - every iteration and for SDA
