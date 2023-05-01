@@ -432,7 +432,8 @@ write.ensemble.configs <- function(defaults, ensemble.samples, settings, model,
       defined.pfts <- settings$pfts %>% purrr::map('name') %>% unlist %>% as.character
       # subset ensemble samples based on the pfts that are specified in the site and they are also sampled from.
       if (length(which(site.pfts.vec %in% defined.pfts)) > 0 )
-        new.params <- new.params %>% purrr::map(~list(.x[[which(site.pfts.vec %in% defined.pfts)]],restart=.x$restart))
+        #commenting out this line b/c it causes an error for running with 1 site 
+        #new.params <- new.params %>% purrr::map(~list(.x[[which(site.pfts.vec %in% defined.pfts)]],restart=.x$restart))
       # warn if there is a pft specified in the site but it's not defined in the pecan xml.
       if (length(which(!(site.pfts.vec %in% defined.pfts)))>0) 
         PEcAn.logger::logger.warn(paste0("The following pfts are specified for the siteid ", settings$run$site$id ," but they are not defined as a pft in pecan.xml:",
