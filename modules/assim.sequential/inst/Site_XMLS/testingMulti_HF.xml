@@ -62,8 +62,18 @@
    <constants>
     <num>1</num>
    </constants>
+   <posterior.files>/fs/data2/output/PEcAn_1000010530/pft/temperate.deciduous.HPDA/trait.mcmc.pda.temperate.deciduous.HPDA_1000031651_hierarchical_mean.Rdata</posterior.files>
    <posteriorid>1000022311</posteriorid>
    <outdir>/fs/data2/output//PEcAn_1000010530/pft/temperate.deciduous.HPDA</outdir>
+  </pft>
+  <pft>
+   <name>soil.HPDA</name>
+   <constants>
+    <num>1</num>
+   </constants>
+   <posterior.files>/projectnb/dietzelab/ahelgeso/copy_posteriorsoil/soil.HPDA/trait.mcmc.pda.soil.HPDA_som_respiration_rate_correction.Rdata</posterior.files>
+   <posteriorid>1000022310</posteriorid>
+   <outdir>/fs/data2/output//PEcAn_1000010530/pft/soil.HPDA</outdir>
   </pft>
   </pfts>
   <meta.analysis>
@@ -71,7 +81,7 @@
     <random.effects>FALSE</random.effects>
   </meta.analysis>
   <ensemble>
-    <size>10</size>
+    <size>100</size>
     <variable>NEE</variable>
     <samplingspace>
       <parameters>
@@ -105,6 +115,7 @@
         <lon>-72.15000</lon>
         <site.pft>
           <pft.name>temperate.deciduous.HPDA</pft.name>
+          <pft.name>soil.HPDA</pft.name>
         </site.pft>
       </site>
       <inputs>
@@ -119,7 +130,7 @@
     <name>geo.bu.edu</name>
     <user>ahelgeso</user>
     <prerun>module load R/4.1.2</prerun>
-    <qsub>qsub -l h_rt=24:00:00 -q &apos;geo*&apos; -N SIPNETrun -S /bin/bash -o /projectnb/dietzelab/ahelgeso/Jobs/qsub -e /projectnb/dietzelab/ahelgeso/Jobs/qsub</qsub>
+    <qsub>qsub -l h_rt=00:02:00 -q &apos;geo*&apos; -N SIPNETrun -S /bin/bash -o /projectnb/dietzelab/ahelgeso/Jobs/qsub -e /projectnb/dietzelab/ahelgeso/Jobs/qsub</qsub>
     <qsub.jobid>Your job ([0-9]+) .*</qsub.jobid>
     <qstat>'qstat -j @JOBID@ &amp;> /dev/null || echo DONE'</qstat>
     <tunnel>/projectnb/dietzelab/ahelgeso/tunnel</tunnel>
