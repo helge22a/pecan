@@ -120,7 +120,12 @@ model2netcdf.SIPNET <- function(outdir, sitelat, sitelon, start_date, end_date, 
 
   # check that specified years and output years match
   if (!all(year_seq %in% simulation_years)) {
-    PEcAn.logger::logger.severe("Years selected for model run and SIPNET output years do not match ")
+    if(TRUE %in% (year_seq %in% simulation_years)){
+      year_seq <- simulation_years
+    }else{
+      PEcAn.logger::logger.severe("Years selected for model run and SIPNET output years do not match ")
+      
+    }
   }
 
   # get number of model timesteps per day
@@ -182,8 +187,7 @@ model2netcdf.SIPNET <- function(outdir, sitelat, sitelon, start_date, end_date, 
     ## Setup outputs for netCDF file in appropriate units
     output       <- list(
       "GPP" = (sub.sipnet.output$gpp * 0.001) / timestep.s,  # GPP in kgC/m2/s
-      "NPP" = (sub.sipnet.output$gpp * 0.001) / timestep.s - ((sub.sipnet.output$rAboveground *
-                                                                       0.001) / timestep.s + (sub.sipnet.output$rRoot * 0.001) / timestep.s), # NPP in kgC/m2/s. Post SIPNET calculation
+      "NPP" = (sub.sipnet.output$npp * 0.001) / timestep.s,  # NPP in kgC/m2/s
       "TotalResp" = (sub.sipnet.output$rtot * 0.001) / timestep.s,  # Total Respiration in kgC/m2/s
       "AutoResp" = (sub.sipnet.output$rAboveground * 0.001) / timestep.s + (sub.sipnet.output$rRoot *
                                                                                0.001) / timestep.s,  # Autotrophic Respiration in kgC/m2/s
