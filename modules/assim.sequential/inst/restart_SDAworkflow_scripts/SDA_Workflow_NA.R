@@ -16,6 +16,7 @@ library("sf")
 library("lubridate")
 library("foreach")
 library("Kendall")
+library("codetools")
 #plan(multisession)
 
 
@@ -25,9 +26,9 @@ library("Kendall")
 #forecastPath <- "/projectnb/dietzelab/ahelgeso/Site_Outputs/Harvard/CH1_freeRuns/PEcAn_2023-04-20-15-28-17/"
 SDApath <- "/projectnb/dietzelab/ahelgeso/SDA/HF_SDA_Output/CH1_free_runs/"
 #manually set to previous run settings$info$date it creates the filepath to previous run
-next.oldir <- "2023-04-28-11-28"
+next.oldir <- "2023-05-10-15-43"
 #to manually change start date 
-runDays <- seq(as.Date("2021-05-17"), as.Date("2022-06-23"), by="days")
+runDays <- seq(as.Date("2021-09-19"), as.Date("2021-09-20"), by="days")
 
 #------------------------------------------------------------------------------------------------
 #------------------------------------------ Preparing the pecan xml -----------------------------
@@ -36,8 +37,8 @@ for (s in 1:length(runDays)) {
   #set sda.start
   sda.start <- as.Date(runDays[s])
   #set met.start & met.end
-  met.check <- as.character(sda.start - 1)
-  met.start <- sda.start - 1
+  met.check <- as.character(sda.start)
+  met.start <- sda.start
   met.end <- met.start + lubridate::days(35)
   #if dates is listed as not having met data available skip to next day
   load("/projectnb/dietzelab/ahelgeso/NOAA_met_data_CH1/noaa_clim/HARV/datesWOmet.Rdata")
@@ -275,6 +276,7 @@ for (s in 1:length(runDays)) {
   }
   names(run_id) = sprintf("id%s",seq(1:length(list.files(file.path(restart$filepath, "out"))))) #rename list
   settings$runs$id = run_id
+  settings$runs$id$id101 <- NULL
   
   #save restart object
   save(restart, next.oldir, file = file.path(settings$outdir, "restart.Rdata"))
@@ -296,7 +298,7 @@ for (s in 1:length(runDays)) {
                                     debug = FALSE,
                                     pause = FALSE,
                                     Profiling = FALSE,
-                                    OutlierDetection=FALSE))
+                                    OutlierDetection=TRUE))
   
   
   
