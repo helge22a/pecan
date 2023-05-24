@@ -107,9 +107,9 @@
   <jobtemplate>/projectnb/dietzelab/ahelgeso/pecan/models/template/inst/template_geo.job</jobtemplate>
  </model>
   <run>
-    <settings.646>
+    <settings.1000004945>
       <site>
-        <id>646</id>
+        <id>1000004945</id>
         <name>Harvard Forest (HF)</name>
         <lat>42.50000</lat>
         <lon>-72.15000</lon>
@@ -124,7 +124,7 @@
           <output>SIPNET</output>
         </met>
       </inputs>
-    </settings.646>
+    </settings.1000004945>
   </run>
   <host>
     <name>geo.bu.edu</name>
