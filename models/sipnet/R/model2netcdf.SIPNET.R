@@ -217,13 +217,18 @@ model2netcdf.SIPNET <- function(outdir, sitelat, sitelon, start_date, end_date, 
     output[["litter_carbon_content"]] <- sub.sipnet.output$litter * 0.001  ## litter kgC/m2
     output[["litter_mass_content_of_water"]] <- (sub.sipnet.output$litterWater * 10) # Litter water kgW/m2
     #calculate LAI for standard output
-    param <- read.table(file.path(gsub(pattern = "/out/",
-                                 replacement = "/run/", x = outdir),
-                            "sipnet.param"), stringsAsFactors = FALSE)
-    id <- which(param[, 1] == "leafCSpWt")
-    leafC <- 0.48
-    SLA <- 1000 / param[id, 2] #SLA, m2/kgC
-    output[["LAI"]] <- output[["leaf_carbon_content"]] * SLA # LAI
+    #check for LAI in sipnet.out file if not present use SLA calc
+    if(!is.null(sub.sipnet.output$LAI)){
+      output[["LAI"]] <- sub.sipnet.output$LAI # LAI
+    }else{
+      param <- read.table(file.path(gsub(pattern = "/out/",
+                                         replacement = "/run/", x = outdir),
+                                    "sipnet.param"), stringsAsFactors = FALSE)
+      id <- which(param[, 1] == "leafCSpWt")
+      leafC <- 0.48
+      SLA <- 1000 / param[id, 2] #SLA, m2/kgC
+      output[["LAI"]] <- output[["leaf_carbon_content"]] * SLA # LAI
+    }
     output[["fine_root_carbon_content"]] <- sub.sipnet.output$fineRootC   * 0.001  ## fine_root_carbon_content kgC/m2
     output[["coarse_root_carbon_content"]] <- sub.sipnet.output$coarseRootC * 0.001  ## coarse_root_carbon_content kgC/m2
     output[["GWBI"]] <- (sub.sipnet.output$woodCreation * 0.001) / 86400 ## kgC/m2/s - this is daily in SIPNET
