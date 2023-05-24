@@ -16,6 +16,7 @@ library("sf")
 library("lubridate")
 library("foreach")
 library("Kendall")
+library("codetools")
 #plan(multisession)
 
 
@@ -27,51 +28,59 @@ library("Kendall")
 #   logger.severe("Missing required arguments")
 # }
 #forecastPath points to the folder where unconstrained forecast runs can be found
-#forecastPath <- "/projectnb/dietzelab/ahelgeso/Site_Outputs/Harvard/Fixed_PAR/PEcAn_2023-03-10-13-12-03/"
+#forecastPath <- "/projectnb/dietzelab/ahelgeso/Site_Outputs/Harvard/CH1_freeRuns/PEcAn_2023-05-04-12-52-33"
 #SDApath points to the folder where SDA forecast runs can be found
-SDApath <- "/projectnb/dietzelab/ahelgeso/SDA/HF_SDA_Output/Fixed_PAR"
+SDApath <- "/projectnb/dietzelab/ahelgeso/SDA/HF_SDA_Output/CH1_lai_runs/"
 #SDApath <- tmp[1]
 #manually set to previous run settings$info$date it creates the filepath to previous run
 #when you run with write to BETY = FALSE the system uses the system date/time as the unique folder name for runs
-next.oldir <- "2023-03-15-13-36"
+next.oldir <- "2023-05-11-12-59"
 #next.oldir <- tmp[2]
 #outputPath points to location where you would like to save SDA output note this path could match SDApath but does not need to
 outputPath <- "/projectnb/dietzelab/ahelgeso/SDA/HF_SDA_Output/CH1_lai_runs/"
 #outputPath <- tmp[3]
 #settingsPath points to location where multisite xml can be found
-settingsPath <- "/projectnb/dietzelab/ahelgeso/pecan/modules/assim.sequential/inst/Site_XMLS/testingMulti_HF.xml"
+#settingsPath <- "/projectnb/dietzelab/ahelgeso/pecan/modules/assim.sequential/inst/Site_XMLS/testingMulti_HF.xml"
 #settingsPath <- tmp[4]
 #to manually change start date 
-runDays <- seq(as.Date("2021-05-28"), as.Date("2021-08-31"), by="days")
+runDays <- seq(as.Date("2021-10-03"), as.Date("2021-10-12"), by="days")
 #runDays <- seq(as.Date(tmp[5]), as.Date(tmp[6]), by="days")
 
 #------------------------------------------------------------------------------------------------
 #------------------------------------------ Preparing the pecan xml -----------------------------
 #------------------------------------------------------------------------------------------------
 for (s in 1:length(runDays)) {
-#restart list will store the full filepath to previous runs and when to start SDA cut 
-restart <- list()
-setwd(outputPath)
-#set sda.start
-sda.start <- as.Date(runDays[s])
-#sda.start <- as.Date("2021-07-15")
-
-#reading xml
-settings <- read.settings(settingsPath)
-
-#grab site info
-site_info <- list(
-  site_id = settings$run$site$id,
-  site_name = settings$run$site$name,
-  lat = settings$run$site$lat,
-  lon = settings$run$site$lon,
-  time_zone = "UTC")
-
-#grab old.dir filepath from previous SDA run
-sda.runs <- list.files(SDApath, full.names = TRUE, pattern = paste0("PEcAn_", next.oldir))
-#add filpath to restart list
-restart$filepath <- sda.runs
-#restart$filepath <- forecastPath
+  #set sda.start
+  sda.start <- as.Date(runDays[s])
+  #set met.start & met.end
+  met.check <- as.character(sda.start)
+  met.start <- sda.start
+  met.end <- met.start + lubridate::days(35)
+  #if dates is listed as not having met data available skip to next day
+  load("/projectnb/dietzelab/ahelgeso/NOAA_met_data_CH1/noaa_clim/HARV/datesWOmet.Rdata")
+  if(met.check %in% datesWOmet){
+    next
+  }
+  restart <- list()
+  setwd(outputPath)
+  #sda.start <- as.Date("2021-07-15")
+  
+  #reading xml
+  settings <- read.settings("/projectnb/dietzelab/ahelgeso/pecan/modules/assim.sequential/inst/Site_XMLS/testingMulti_HF.xml")
+  
+  #grab site info
+  site_info <- list(
+    site_id = settings$run$site$id,
+    site_name = settings$run$site$name,
+    lat = settings$run$site$lat,
+    lon = settings$run$site$lon,
+    time_zone = "UTC")
+  
+  #grab old.dir filepath from previous SDA run
+  sda.runs <- list.files(SDApath, full.names = TRUE, pattern = paste0("PEcAn_", next.oldir))
+  # previous <- sda.runs[2]
+  restart$filepath <- sda.runs
+  #restart$filepath <- forecastPath
 
 #connecting to DB
 con <-try(PEcAn.DB::db.open(settings$database$bety), silent = TRUE)
@@ -103,10 +112,6 @@ on.exit(db.close(con))
 # if(FALSE %in% ensPresent){
 #   next
 # }
-
-#set met.start & met.end
-met.start <- sda.start - 1
-met.end <- met.start + lubridate::days(35)
 
 # --------------------------------------------------------------------------------------------------
 #---------------------------------------------- LAI DATA -------------------------------------
@@ -345,13 +350,15 @@ settings$run$inputs$met$path = met_id
 #add run ids from previous sda to settings object to be passed to build X
 run_id <- list()
 for (k in 1:length(list.files(file.path(restart$filepath, "out")))) {
-  run_id[[k]] = as.character(list.files(file.path(restart$filepath, "out")[k]))
+  run_id[[k]] = as.character(list.files(file.path(restart$filepath, "out")))[k]
 }
 names(run_id) = sprintf("id%s",seq(1:length(list.files(file.path(restart$filepath, "out"))))) #rename list
 settings$runs$id = run_id
+settings$runs$id$id101 <- NULL
 
 #save restart object
 save(restart, next.oldir, obs.mean, obs.cov, file = file.path(settings$outdir, "restart.Rdata"))
+PEcAn.logger::logger.info("SDA run beginning for", as.character(sda.start))
 #run sda function
 sda.enkf.multisite(settings = settings, 
                    obs.mean = obs.mean, 
@@ -370,7 +377,7 @@ sda.enkf.multisite(settings = settings,
                                   debug = FALSE,
                                   pause = FALSE,
                                   Profiling = FALSE,
-                                  OutlierDetection=FALSE))
+                                  OutlierDetection=TRUE))
 
 
 
