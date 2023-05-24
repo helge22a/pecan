@@ -292,7 +292,7 @@ sda.enkf.multisite <- function(settings,
                        new.params = new.params, 
                        nens = nens, 
                        read_restart_times = read_restart_times, 
-                       outdir = paste0(old.dir, "out/"), 
+                       outdir = file.path(old.dir, "out/"), 
                        t = 1, 
                        var.names = var.names, 
                        my.read_restart = my.read_restart,
@@ -334,7 +334,7 @@ sda.enkf.multisite <- function(settings,
       new.params <- sda_matchparam(settings, ensemble.samples, site.ids, nens)
     }
       #sample met ensemble members
-      inputs <- conf.settings %>% map(function(setting) {
+      inputs <- settings %>% map(function(setting) {
         input.ens.gen(
           settings = setting,
           input = "met",
